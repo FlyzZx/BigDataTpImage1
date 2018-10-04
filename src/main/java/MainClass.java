@@ -38,6 +38,7 @@ public class MainClass {
 
     public static void main(String[] args) {
         opencv_core.Mat image = imread("data/tower.jpg", IMREAD_COLOR);
+        resize(image,image,new opencv_core.Size(800,600));
         if (image == null || image.empty()) {
             return;
         }
@@ -46,8 +47,8 @@ public class MainClass {
         Show(image, "original");
 
         //morpho(image);
-        //wreckedtomestleseulRGB(image);
-        histogramme(image);
+        wreckedtomestleseulRGB(image);
+        //histogramme(image);
 
     }
 
@@ -56,16 +57,16 @@ public class MainClass {
         cvtColor(image, gray, CV_RGB2GRAY);
         Show(gray, "Gray");
 
-        showHistogram(getHistogram(image), "Histogramme");
+        showHistogram(getHistogram(image), "Histogramme",Color.blue);
     }
 
-    public static void showHistogram(float[] hist, String caption) {
+    public static void showHistogram(float[] hist, String caption,Color couleur ) {
         int numberOfBins = 256;
         //	Output	image	size
         int width = numberOfBins;
         int height = numberOfBins;
         //	Set	highest	point	to	90%	of	the	number	of	bins
-        double scale = 1 / max(hist) * height;
+        double scale = 0.9 / max(hist) * height;
         //	Create	a	color	image	to	draw	on
         BufferedImage canvas = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = canvas.createGraphics();
@@ -73,7 +74,7 @@ public class MainClass {
         g.setPaint(Color.WHITE);
         g.fillRect(0, 0, width, height);
         //	Draw	a	vertical	line	for	each	bin
-        g.setPaint(Color.BLUE);
+        g.setPaint(couleur);
         for (int bin = 0; bin < numberOfBins; bin++) {
             int h = (int) Math.round(hist[bin] * scale);
             g.drawLine(bin, height - 1, bin, height - h - 1);
@@ -84,6 +85,16 @@ public class MainClass {
         CanvasFrame canvasF = new CanvasFrame(caption, 1);
         canvasF.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         canvasF.showImage(canvas);
+    }
+
+    public static float max(float[] tab){
+       float max = Float.MIN_VALUE;
+        for(int i=0 ; i<tab.length;i++){
+            if(max < tab[i]){
+                max = tab[i];
+            }
+        }
+        return max;
     }
 
     public static float[] getHistogram(opencv_core.Mat image) {
@@ -106,8 +117,12 @@ public class MainClass {
         opencv_core.MatVector rgbSplit = new opencv_core.MatVector();
         split(image, rgbSplit);
         Show(rgbSplit.get(0), "Red");
+        showHistogram(getHistogram(rgbSplit.get(0)),"Histo Red",Color.RED);
         Show(rgbSplit.get(1), "Green");
+        showHistogram(getHistogram(rgbSplit.get(1)),"Histo Green",Color.GREEN);
         Show(rgbSplit.get(2), "Blue");
+        showHistogram(getHistogram(rgbSplit.get(2)),"Histo Blue",Color.BLUE);
+
     }
 
     private static void morpho(opencv_core.Mat image) {
