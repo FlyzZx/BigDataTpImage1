@@ -93,8 +93,8 @@ public class MainClass {
             histo[i] = 0;
 
         UByteIndexer indexer = (UByteIndexer) image.createIndexer();
-        for (int x = 0; x < indexer.width() - 1; x++) {
-            for (int y = 0; y < indexer.height() - 1; y++) {
+        for (int x = 0; x < indexer.width(); x++) {
+            for (int y = 0; y < indexer.height(); y++) {
                 int value = indexer.get(y, x);
                 if(value < 256) histo[value]++;
             }
