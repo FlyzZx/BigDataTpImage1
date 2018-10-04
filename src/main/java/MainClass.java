@@ -112,6 +112,17 @@ public class MainClass {
         }
         return histo;
     }
+    public static opencv_core.Mat getHistogramToMat(opencv_core.Mat image){
+        float[] histo = getHistogram(image);
+        opencv_core.Mat m = new opencv_core.Mat(histo);
+        return m;
+    }
+
+    private  static double compareHistogram(opencv_core.Mat histo1, opencv_core.Mat histo2, int comparisonMethod){
+        double similarite = compareHist(histo1,histo2,comparisonMethod);
+        System.out.println("Similarité :" + similarite);
+        return similarite;
+    }
 
     private static void wreckedtomestleseulRGB(opencv_core.Mat image) {
         opencv_core.MatVector rgbSplit = new opencv_core.MatVector();
@@ -122,6 +133,7 @@ public class MainClass {
         showHistogram(getHistogram(rgbSplit.get(1)),"Histo Green",Color.GREEN);
         Show(rgbSplit.get(2), "Blue");
         showHistogram(getHistogram(rgbSplit.get(2)),"Histo Blue",Color.BLUE);
+
 
     }
 
