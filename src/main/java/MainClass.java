@@ -74,7 +74,7 @@ public class MainClass {
             double[] prediction = new double[descriptorsRef.size()];
             for(int i = 0; i < descriptorsRef.size(); i++) {
                 opencv_core.Mat mat = descriptorsRef.get(i);
-                System.out.println("Prediction for " + i + " : " + compareHistogram(mat, histoTarget, CV_COMP_CORREL));
+                System.out.println("Prediction for " + i + " : " + Math.round((1 - compareHistogram(mat, histoTarget, CV_COMP_BHATTACHARYYA  )) * 100) + "%");
             }
         }
     }
