@@ -7,11 +7,14 @@ import org.bytedeco.javacv.OpenCVFrameConverter;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.ArrayList;
 
 import static jdk.nashorn.internal.objects.NativeMath.max;
 import static org.bytedeco.javacpp.opencv_core.CV_8U;
 import static org.bytedeco.javacpp.opencv_core.split;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
+import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 
@@ -37,19 +40,43 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
-        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_COLOR);
+        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_GRAYSCALE);
         resize(image,image,new opencv_core.Size(800,600));
         if (image == null || image.empty()) {
             return;
         }
 
-        System.out.println("image" + image.cols() + "	x	" + image.rows());
-        Show(image, "original");
+        //System.out.println("image" + image.cols() + "	x	" + image.rows());
+        //Show(image, "original");
 
         //morpho(image);
-        wreckedtomestleseulRGB(image);
+        //wreckedtomestleseulRGB(image);
         //histogramme(image);
+        compareImage(image, "data/Monkey/");
 
+    }
+
+    private static void compareImage(opencv_core.Mat imgTarget, String pathRef) {
+        ArrayList<opencv_core.Mat> descriptorsRef = new ArrayList<opencv_core.Mat>();
+        File trainFolder = new File(pathRef);
+        if(trainFolder.isDirectory()) {
+            System.out.println("Starting train...");
+            for (String file : trainFolder.list()) {
+                opencv_core.Mat ref = imread(pathRef + file, IMREAD_GRAYSCALE);
+                System.out.println("Opening " + file);
+                resize(ref,ref,new opencv_core.Size(800,600));
+                //histogramme(ref);
+                descriptorsRef.add(getHistogramToMat(ref));
+            }
+
+            System.out.println("Predicting...");
+            opencv_core.Mat histoTarget = getHistogramToMat(imgTarget);
+            double[] prediction = new double[descriptorsRef.size()];
+            for(int i = 0; i < descriptorsRef.size(); i++) {
+                opencv_core.Mat mat = descriptorsRef.get(i);
+                System.out.println("Prediction for " + i + " : " + compareHistogram(mat, histoTarget, CV_COMP_CORREL));
+            }
+        }
     }
 
     private static void histogramme(opencv_core.Mat image) {
@@ -120,7 +147,7 @@ public class MainClass {
 
     private  static double compareHistogram(opencv_core.Mat histo1, opencv_core.Mat histo2, int comparisonMethod){
         double similarite = compareHist(histo1,histo2,comparisonMethod);
-        System.out.println("Similarité :" + similarite);
+        //System.out.println("Similarité :" + similarite);
         return similarite;
     }
 
