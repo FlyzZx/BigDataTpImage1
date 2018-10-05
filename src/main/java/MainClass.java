@@ -1,4 +1,5 @@
 import org.bytedeco.javacpp.indexer.FloatRawIndexer;
+import org.bytedeco.javacpp.indexer.IntRawIndexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.javacpp.opencv_core;
 import org.bytedeco.javacv.CanvasFrame;
@@ -10,10 +11,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
 
-import static jdk.nashorn.internal.objects.NativeMath.max;
-import static org.bytedeco.javacpp.opencv_core.CV_8U;
-import static org.bytedeco.javacpp.opencv_core.split;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
+import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
@@ -41,7 +39,7 @@ public class MainClass {
 
     public static void main(String[] args) {
         opencv_core.Mat image = imread("data/tower.jpg", IMREAD_GRAYSCALE);
-        resize(image,image,new opencv_core.Size(800,600));
+        resize(image, image, new opencv_core.Size(800, 600));
         if (image == null || image.empty()) {
             return;
         }
@@ -52,19 +50,91 @@ public class MainClass {
         //morpho(image);
         //wreckedtomestleseulRGB(image);
         //histogramme(image);
-        compareImage(image, "data/Monkey/");
+        //compareImage(image, "data/Monkey/");
+        withLut(image);
+    }
 
+    private static void withLut(opencv_core.Mat mat) {
+        System.out.println("With inversed lut");
+        opencv_core.Mat inversedLutImage = mat.clone();
+        LUT(mat, new opencv_core.Mat(buildInversedLut()), inversedLutImage);
+        inversedLutImage.convertTo(inversedLutImage, CV_8U);
+        Show(inversedLutImage, "With inversed LUT");
+
+        System.out.println("With custom lut");
+        opencv_core.Mat customLutImage = mat.clone();
+        LUT(mat, new opencv_core.Mat(buildCustomLut()), customLutImage);
+        customLutImage.convertTo(customLutImage, CV_8U);
+        Show(customLutImage, "With custom LUT");
+
+        System.out.println("With custom 2 lut");
+        opencv_core.Mat customTwoLutImage = mat.clone();
+        LUT(mat, new opencv_core.Mat(buildCustomTwoLut()), customTwoLutImage);
+        customTwoLutImage.convertTo(customTwoLutImage, CV_8U);
+        Show(customTwoLutImage, "With custom 2 LUT");
+
+        System.out.println("With custom function lut");
+        //opencv_core.Mat lutWithCustomFunction = mat.clone();
+        //LUT(mat, new opencv_core.Mat(buildCustomTwoLut()), lutWithCustomFunction);
+        Mat afterCustomLut = applyLut(mat, buildCustomTwoLut());
+        //afterCustomLut.convertTo(afterCustomLut, CV_8U);
+        Show(afterCustomLut, "With custom function LUT");
+    }
+
+    private static Mat applyLut(Mat image, float[] lut) {
+        Mat resultMat = image.clone();
+        UByteIndexer indexer = resultMat.createIndexer();
+        for(int x = 0; x < indexer.height(); x++) {
+            for(int y = 0; y < indexer.width(); y++) {
+                indexer.put(x, y, (int) lut[indexer.get(x, y)]);
+            }
+        }
+        return resultMat;
+    }
+
+    private static float[] buildInversedLut() {
+        float[] lut = new float[256];
+        for (int i = 0; i < lut.length; i++) {
+            lut[i] = 255 - i;
+        }
+        return lut;
+    }
+
+    private static float[] buildCustomLut() {
+        float[] lut = new float[256];
+        for(int i = 0; i < lut.length; i++) {
+            if(i <= 17) {
+                lut[i] = 0;
+            } else if (i >= 102) {
+                lut[i] = 255;
+            } else {
+                lut[i] = 3 * i;
+            }
+        }
+        return lut;
+    }
+
+    private static float[] buildCustomTwoLut() {
+        float[] lut = new float[256];
+        for(int i = 0; i < lut.length; i++) {
+            //y=(cos(((float)x/255)*2*PI - PI)+1)*255
+            lut[i] = (float) ((Math.cos(((float)i/255)*2*Math.PI - Math.PI)+1)*255);
+            if(lut[i] > 255) {
+                lut[i] = 255;
+            }
+        }
+        return lut;
     }
 
     private static void compareImage(opencv_core.Mat imgTarget, String pathRef) {
         ArrayList<opencv_core.Mat> descriptorsRef = new ArrayList<opencv_core.Mat>();
         File trainFolder = new File(pathRef);
-        if(trainFolder.isDirectory()) {
+        if (trainFolder.isDirectory()) {
             System.out.println("Starting train...");
             for (String file : trainFolder.list()) {
                 opencv_core.Mat ref = imread(pathRef + file, IMREAD_GRAYSCALE);
                 System.out.println("Opening " + file);
-                resize(ref,ref,new opencv_core.Size(800,600));
+                resize(ref, ref, new opencv_core.Size(800, 600));
                 //histogramme(ref);
                 descriptorsRef.add(getHistogramToMat(ref));
             }
@@ -72,9 +142,9 @@ public class MainClass {
             System.out.println("Predicting...");
             opencv_core.Mat histoTarget = getHistogramToMat(imgTarget);
             double[] prediction = new double[descriptorsRef.size()];
-            for(int i = 0; i < descriptorsRef.size(); i++) {
+            for (int i = 0; i < descriptorsRef.size(); i++) {
                 opencv_core.Mat mat = descriptorsRef.get(i);
-                System.out.println("Prediction for " + i + " : " + Math.round((1 - compareHistogram(mat, histoTarget, CV_COMP_BHATTACHARYYA  )) * 100) + "%");
+                System.out.println("Prediction for " + i + " : " + Math.round((1 - compareHistogram(mat, histoTarget, CV_COMP_BHATTACHARYYA)) * 100) + "%");
             }
         }
     }
@@ -84,10 +154,10 @@ public class MainClass {
         cvtColor(image, gray, CV_RGB2GRAY);
         Show(gray, "Gray");
 
-        showHistogram(getHistogram(image), "Histogramme",Color.blue);
+        showHistogram(getHistogram(image), "Histogramme", Color.blue);
     }
 
-    public static void showHistogram(float[] hist, String caption,Color couleur ) {
+    public static void showHistogram(float[] hist, String caption, Color couleur) {
         int numberOfBins = 256;
         //	Output	image	size
         int width = numberOfBins;
@@ -114,10 +184,10 @@ public class MainClass {
         canvasF.showImage(canvas);
     }
 
-    public static float max(float[] tab){
-       float max = Float.MIN_VALUE;
-        for(int i=0 ; i<tab.length;i++){
-            if(max < tab[i]){
+    public static float max(float[] tab) {
+        float max = Float.MIN_VALUE;
+        for (int i = 0; i < tab.length; i++) {
+            if (max < tab[i]) {
                 max = tab[i];
             }
         }
@@ -134,19 +204,20 @@ public class MainClass {
         for (int x = 0; x < indexer.width(); x++) {
             for (int y = 0; y < indexer.height(); y++) {
                 int value = indexer.get(y, x);
-                if(value < 256) histo[value]++;
+                if (value < 256) histo[value]++;
             }
         }
         return histo;
     }
-    public static opencv_core.Mat getHistogramToMat(opencv_core.Mat image){
+
+    public static opencv_core.Mat getHistogramToMat(opencv_core.Mat image) {
         float[] histo = getHistogram(image);
         opencv_core.Mat m = new opencv_core.Mat(histo);
         return m;
     }
 
-    private  static double compareHistogram(opencv_core.Mat histo1, opencv_core.Mat histo2, int comparisonMethod){
-        double similarite = compareHist(histo1,histo2,comparisonMethod);
+    private static double compareHistogram(opencv_core.Mat histo1, opencv_core.Mat histo2, int comparisonMethod) {
+        double similarite = compareHist(histo1, histo2, comparisonMethod);
         //System.out.println("Similarité :" + similarite);
         return similarite;
     }
@@ -155,11 +226,11 @@ public class MainClass {
         opencv_core.MatVector rgbSplit = new opencv_core.MatVector();
         split(image, rgbSplit);
         Show(rgbSplit.get(0), "Red");
-        showHistogram(getHistogram(rgbSplit.get(0)),"Histo Red",Color.RED);
+        showHistogram(getHistogram(rgbSplit.get(0)), "Histo Red", Color.RED);
         Show(rgbSplit.get(1), "Green");
-        showHistogram(getHistogram(rgbSplit.get(1)),"Histo Green",Color.GREEN);
+        showHistogram(getHistogram(rgbSplit.get(1)), "Histo Green", Color.GREEN);
         Show(rgbSplit.get(2), "Blue");
-        showHistogram(getHistogram(rgbSplit.get(2)),"Histo Blue",Color.BLUE);
+        showHistogram(getHistogram(rgbSplit.get(2)), "Histo Blue", Color.BLUE);
 
 
     }
