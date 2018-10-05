@@ -12,6 +12,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
@@ -37,21 +38,41 @@ public class MainClass {
         }
     }
 
+    private static void segmentationKmeans(Mat image) {
+        //Reshape en vecteur n-dims
+        Mat reshaped_image = image.reshape(1, image.cols()*image.rows());
+        Mat reshaped_image32f = new Mat();
+        reshaped_image.convertTo(reshaped_image32f, CV_32F);
+
+        //KMEANS
+        int clusterCount = 4;
+        Mat labels = new Mat(reshaped_image32f.size());
+        Mat centers = new Mat();
+        TermCriteria criteria = new TermCriteria(TermCriteria.MAX_ITER + TermCriteria.EPS, 10, 1.0);
+        kmeans(reshaped_image32f, clusterCount, labels, criteria, 10, KMEANS_PP_CENTERS, centers);
+
+        //Reshape des labels pour affichage
+        labels.convertTo(labels, CV_8U);
+        labels = labels.reshape(3);
+        Show(labels, "Clustering results");
+    }
+
     public static void main(String[] args) {
-        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_GRAYSCALE);
+        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_COLOR);
         resize(image, image, new opencv_core.Size(800, 600));
         if (image == null || image.empty()) {
             return;
         }
 
         //System.out.println("image" + image.cols() + "	x	" + image.rows());
-        //Show(image, "original");
+        Show(image, "original");
 
         //morpho(image);
         //wreckedtomestleseulRGB(image);
         //histogramme(image);
         //compareImage(image, "data/Monkey/");
-        withLut(image);
+        //withLut(image);
+        segmentationKmeans(image);
     }
 
     private static void withLut(opencv_core.Mat mat) {
