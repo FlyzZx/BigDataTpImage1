@@ -1,6 +1,7 @@
 import org.bytedeco.javacpp.indexer.FloatRawIndexer;
 import org.bytedeco.javacpp.indexer.IntRawIndexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
+import org.bytedeco.javacpp.indexer.UByteRawIndexer;
 import org.bytedeco.javacpp.opencv_core;
 import org.bytedeco.javacv.CanvasFrame;
 import org.bytedeco.javacv.OpenCVFrameConverter;
@@ -27,12 +28,12 @@ public class MainClass {
 
     }
 
-    private void showMat(opencv_core.Mat m) {
+    private static void showMat(opencv_core.Mat m) {
 
-        FloatRawIndexer ind = m.createIndexer();
+        UByteRawIndexer ind = m.createIndexer();
         for (int rows = 0; rows < m.rows(); rows++) {
             for (int cols = 0; cols < m.cols(); cols++) {
-                System.out.print(ind.get(rows, cols));
+                System.out.print(ind.get(rows, cols) + " ");
             }
             System.out.println("");
         }
@@ -52,9 +53,29 @@ public class MainClass {
         kmeans(reshaped_image32f, clusterCount, labels, criteria, 10, KMEANS_PP_CENTERS, centers);
 
         //Reshape des labels pour affichage
+        centers.convertTo(centers, CV_8U);
+        centers = centers.reshape(3);
+        //showMat(centers);
+        Show(centers, "Clustering centers");
+
         labels.convertTo(labels, CV_8U);
-        labels = labels.reshape(3);
-        Show(labels, "Clustering results");
+        Mat newLabels = labels.reshape(3);
+        //showMat(newLabels);
+        Show(newLabels, "Clustering results");
+
+        Mat quantizedImage = new Mat(image.cols(), image.rows(), CV_8U);
+        quantizedImage = quantizedImage.reshape(3);
+
+        UByteRawIndexer indexer = quantizedImage.createIndexer();
+        UByteRawIndexer labelsIndexer = labels.createIndexer();
+        UByteRawIndexer centerIndexer = centers.createIndexer();
+        for(int y = 0; y < indexer.rows(); y++) {
+            for(int x = 0; x < indexer.cols(); x++) {
+                indexer.put(y, x, centerIndexer.get(labelsIndexer.get(x * y)));
+            }
+        }
+        resize(quantizedImage, quantizedImage, new Size(image.cols(), image.rows()));
+        Show(quantizedImage, "Quantization results");
     }
 
     public static void main(String[] args) {
