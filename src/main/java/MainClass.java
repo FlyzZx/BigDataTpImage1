@@ -41,46 +41,68 @@ public class MainClass {
         Mat reshaped_image32f = new Mat();
         reshaped_image.convertTo(reshaped_image32f, CV_32F);
 
-        //KMEANS
+        //KMEANS.
         int clusterCount = 4;
-        Mat labels = new Mat(reshaped_image32f.size());
+        Mat labels = new Mat();
         Mat centers = new Mat();
         TermCriteria criteria = new TermCriteria(TermCriteria.MAX_ITER + TermCriteria.EPS, 10, 1.0);
         kmeans(reshaped_image32f, clusterCount, labels, criteria, 10, KMEANS_PP_CENTERS, centers);
 
         //Reshape des labels pour affichage
         centers.convertTo(centers, CV_8U);
-        //centers = centers.reshape(3);
-        //showMat(centers);
         Show(centers, "Clustering centers");
 
-        labels.convertTo(labels, CV_8U);
+        Mat labelsShow  = new Mat();
+        labels.convertTo(labelsShow, CV_8U,256/clusterCount,3);
+        labels.convertTo(labels,CV_8U);
 
-        //Mat newLabels = labels.reshape(3);
-        //showMat(newLabels);
-        //Show(newLabels, "Clustering results");
-
-        Mat quantizedImage = new Mat(image.cols(), image.rows(), CV_8U);
-        quantizedImage = quantizedImage.reshape(3);
-        MatVector rgbSplit = new MatVector();
-        split(quantizedImage, rgbSplit);
-
-        UByteRawIndexer indexerRed = rgbSplit.get(0).createIndexer();
-        UByteRawIndexer indexerBlue = rgbSplit.get(2).createIndexer();
-        UByteRawIndexer indexerGreen = rgbSplit.get(1).createIndexer();
-        UByteRawIndexer labelsIndexer = labels.createIndexer();
         UByteRawIndexer centerIndexer = centers.createIndexer();
 
-        for (int y = 0; y < quantizedImage.rows(); y++) {
-            for (int x = 0; x < quantizedImage.cols(); x++) {
-                indexerRed.put(y, x, centerIndexer.get(0, labelsIndexer.get(x * y)));
-                indexerBlue.put(y, x, centerIndexer.get(1, labelsIndexer.get(x * y)));
-                indexerGreen.put(y, x, centerIndexer.get(2, labelsIndexer.get(x * y)));
+        labels = labels.reshape(1,image.rows());
+        labelsShow = labelsShow.reshape(1,image.rows());
+        Show(labelsShow,"labels");
+        UByteRawIndexer labelsIndexer = labels.createIndexer();
+
+        int centerHeight =(int)centerIndexer.sizes()[0];
+        int centerWidth =(int)centerIndexer.sizes()[1];
+        ArrayList<int[]> colors = new ArrayList<int[]>();
+        for(int i = 0 ; i< centerHeight ; i++){
+            int[] temp = new int[centerWidth];
+            temp[0] = centerIndexer.get(i,0);
+            temp[1] = centerIndexer.get(i,1);
+            temp[2] = centerIndexer.get(i,2);
+            colors.add(temp);
+        }
+
+        Mat r = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer rIndexer = r.createIndexer();
+        Mat g = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer gIndexer = g.createIndexer();
+        Mat b = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer bIndexer = b.createIndexer();
+
+        for(int i = 0 ; i < labels.rows();i++){
+            for(int j = 0 ; j < labels.cols();j++){
+               int[] couleur = colors.get(labelsIndexer.get(i,j));
+               rIndexer.put(i,j,couleur[0]);
+               gIndexer.put(i,j,couleur[1]);
+               bIndexer.put(i,j,couleur[2]);
             }
         }
-        merge(rgbSplit, quantizedImage);
-        resize(quantizedImage, quantizedImage, new Size(image.cols(), image.rows()));
-        Show(quantizedImage, "Quantization results");
+
+        Show(r,"r");
+        Show(g,"g");
+        Show(b,"b");
+
+        Mat resultats  = new Mat(600,800,CV_8UC3);
+
+        MatVector rgb = new MatVector();
+        rgb.push_back(r);
+        rgb.push_back(g);
+        rgb.push_back(b);
+        merge(rgb,resultats);
+        UByteRawIndexer resultIndexerDebug = resultats.createIndexer();
+        Show(resultats, "Quantization results");
     }
 
     public static void main(String[] args) {
