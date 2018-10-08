@@ -39,6 +39,7 @@ public class MainClass {
 
     public static void main(String[] args) {
         opencv_core.Mat image = imread("data/tower.jpg", IMREAD_GRAYSCALE);
+        opencv_core.Mat image = imread("data/tower.jpg");
         resize(image, image, new opencv_core.Size(800, 600));
         if (image == null || image.empty()) {
             return;
@@ -51,7 +52,7 @@ public class MainClass {
         //wreckedtomestleseulRGB(image);
         //histogramme(image);
         //compareImage(image, "data/Monkey/");
-        withLut(image);
+        //withLut(image);
     }
 
     private static void withLut(opencv_core.Mat mat) {
@@ -79,6 +80,57 @@ public class MainClass {
         Mat afterCustomLut = applyLut(mat, buildCustomTwoLut());
         //afterCustomLut.convertTo(afterCustomLut, CV_8U);
         Show(afterCustomLut, "With custom function LUT");
+    }
+
+    private static void matchTemplateTest() {
+        opencv_core.Mat image1 = imread("data/Mannekenpis/mannekenpis2.jpeg");
+        resize(image1, image1, new opencv_core.Size(800, 600));
+        opencv_core.Mat image2 = imread("data/Mannekenpis/mannekenpis1.jpeg");
+        resize(image2, image2, new opencv_core.Size(800, 600));
+        opencv_core.Mat target = new opencv_core.Mat(image1, new opencv_core.Rect(385, 130, 70, 60));
+        Show(target, "Template");
+        rectangle(image1, new opencv_core.Rect(385, 130, 70, 60), opencv_core.Scalar.YELLOW);
+        Show(image1,"Original");
+        opencv_core.Mat result = new opencv_core.Mat();
+        matchTemplate(
+                image2, // search region
+                target, // template
+                result, // result
+                CV_COMP_BHATTACHARYYA);
+        double[] minVal = new double[1];
+        double[] maxVal = new double[1];
+        opencv_core.Point minPt = new opencv_core.Point();
+        opencv_core.Point maxPt = new opencv_core.Point();
+        minMaxLoc(result, minVal, maxVal, minPt, maxPt, new Mat());
+        System.out.println("minPt = (" + minPt.x() + ", " + minPt.y() + ")");
+        rectangle(image2, new opencv_core.Rect(maxPt.x(), maxPt.y(), target.cols(), target.rows()), opencv_core.Scalar.CYAN);
+        Show(image2, "Best match");
+        Show(result,"result");
+    }
+
+    private static void histogrammeInteret(opencv_core.Mat image) {
+        //Découpe les rectangles sur l'images
+        opencv_core.Mat target1 = new opencv_core.Mat(image, new opencv_core.Rect(120, 40, 30, 30));
+        opencv_core.Mat target2 = new opencv_core.Mat(image, new opencv_core.Rect(250, 80, 30, 30));
+        opencv_core.Mat target3 = new opencv_core.Mat(image, new opencv_core.Rect(500, 420, 50, 50));
+        //Crée un histogramme pour chaque rectangle
+        opencv_core.Mat targetHistoMat1 = getHistogramToMat(target1);
+        opencv_core.Mat targetHistoMat2 = getHistogramToMat(target2);
+        opencv_core.Mat targetHistoMat3 = getHistogramToMat(target3);
+        //Dessine les rectangles sur l'image
+        rectangle(image, new opencv_core.Rect(120, 40, 30, 30), opencv_core.Scalar.YELLOW);
+        rectangle(image, new opencv_core.Rect(250, 80, 30, 30), opencv_core.Scalar.GREEN);
+        rectangle(image, new opencv_core.Rect(500, 420, 50, 50), opencv_core.Scalar.BLUE);
+
+        System.out.println("Similarité entre jaune et vert :" + Math.round((1 - compareHistogram(targetHistoMat1, targetHistoMat2, CV_COMP_BHATTACHARYYA)) * 100) + " %");
+        System.out.println("Similarité entre jaune et bleu :" + Math.round((1 - compareHistogram(targetHistoMat1, targetHistoMat3, CV_COMP_BHATTACHARYYA)) * 100) + " %");
+        System.out.println("Similarité entre vert et bleu :" + Math.round((1 - compareHistogram(targetHistoMat2, targetHistoMat3, CV_COMP_BHATTACHARYYA)) * 100) + " %");
+
+
+        Show(image, "Original");
+        showHistogram(getHistogram(target1), "Rectangle Jaune", Color.yellow);
+        showHistogram(getHistogram(target2), "Rectangle Vert", Color.green);
+        showHistogram(getHistogram(target3), "Rectangle Bleu", Color.blue);
     }
 
     private static Mat applyLut(Mat image, float[] lut) {
