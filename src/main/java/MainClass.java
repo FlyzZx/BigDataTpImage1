@@ -1,5 +1,3 @@
-import org.bytedeco.javacpp.indexer.FloatRawIndexer;
-import org.bytedeco.javacpp.indexer.IntRawIndexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.javacpp.indexer.UByteRawIndexer;
 import org.bytedeco.javacpp.opencv_core;
@@ -13,9 +11,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import static org.bytedeco.javacpp.opencv_core.*;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
-import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 public class MainClass {
@@ -41,7 +37,7 @@ public class MainClass {
 
     private static void segmentationKmeans(Mat image) {
         //Reshape en vecteur n-dims
-        Mat reshaped_image = image.reshape(1, image.cols()*image.rows());
+        Mat reshaped_image = image.reshape(1, image.cols() * image.rows());
         Mat reshaped_image32f = new Mat();
         reshaped_image.convertTo(reshaped_image32f, CV_32F);
 
@@ -54,26 +50,35 @@ public class MainClass {
 
         //Reshape des labels pour affichage
         centers.convertTo(centers, CV_8U);
-        centers = centers.reshape(3);
+        //centers = centers.reshape(3);
         //showMat(centers);
         Show(centers, "Clustering centers");
 
         labels.convertTo(labels, CV_8U);
-        Mat newLabels = labels.reshape(3);
+
+        //Mat newLabels = labels.reshape(3);
         //showMat(newLabels);
-        Show(newLabels, "Clustering results");
+        //Show(newLabels, "Clustering results");
 
         Mat quantizedImage = new Mat(image.cols(), image.rows(), CV_8U);
         quantizedImage = quantizedImage.reshape(3);
+        MatVector rgbSplit = new MatVector();
+        split(quantizedImage, rgbSplit);
 
-        UByteRawIndexer indexer = quantizedImage.createIndexer();
+        UByteRawIndexer indexerRed = rgbSplit.get(0).createIndexer();
+        UByteRawIndexer indexerBlue = rgbSplit.get(2).createIndexer();
+        UByteRawIndexer indexerGreen = rgbSplit.get(1).createIndexer();
         UByteRawIndexer labelsIndexer = labels.createIndexer();
         UByteRawIndexer centerIndexer = centers.createIndexer();
-        for(int y = 0; y < indexer.rows(); y++) {
-            for(int x = 0; x < indexer.cols(); x++) {
-                indexer.put(y, x, centerIndexer.get(labelsIndexer.get(x * y)));
+
+        for (int y = 0; y < quantizedImage.rows(); y++) {
+            for (int x = 0; x < quantizedImage.cols(); x++) {
+                indexerRed.put(y, x, centerIndexer.get(0, labelsIndexer.get(x * y)));
+                indexerBlue.put(y, x, centerIndexer.get(1, labelsIndexer.get(x * y)));
+                indexerGreen.put(y, x, centerIndexer.get(2, labelsIndexer.get(x * y)));
             }
         }
+        merge(rgbSplit, quantizedImage);
         resize(quantizedImage, quantizedImage, new Size(image.cols(), image.rows()));
         Show(quantizedImage, "Quantization results");
     }
@@ -126,8 +131,8 @@ public class MainClass {
     private static Mat applyLut(Mat image, float[] lut) {
         Mat resultMat = image.clone();
         UByteIndexer indexer = resultMat.createIndexer();
-        for(int x = 0; x < indexer.height(); x++) {
-            for(int y = 0; y < indexer.width(); y++) {
+        for (int x = 0; x < indexer.height(); x++) {
+            for (int y = 0; y < indexer.width(); y++) {
                 indexer.put(x, y, (int) lut[indexer.get(x, y)]);
             }
         }
@@ -144,8 +149,8 @@ public class MainClass {
 
     private static float[] buildCustomLut() {
         float[] lut = new float[256];
-        for(int i = 0; i < lut.length; i++) {
-            if(i <= 17) {
+        for (int i = 0; i < lut.length; i++) {
+            if (i <= 17) {
                 lut[i] = 0;
             } else if (i >= 102) {
                 lut[i] = 255;
@@ -158,10 +163,10 @@ public class MainClass {
 
     private static float[] buildCustomTwoLut() {
         float[] lut = new float[256];
-        for(int i = 0; i < lut.length; i++) {
+        for (int i = 0; i < lut.length; i++) {
             //y=(cos(((float)x/255)*2*PI - PI)+1)*255
-            lut[i] = (float) ((Math.cos(((float)i/255)*2*Math.PI - Math.PI)+1)*255);
-            if(lut[i] > 255) {
+            lut[i] = (float) ((Math.cos(((float) i / 255) * 2 * Math.PI - Math.PI) + 1) * 255);
+            if (lut[i] > 255) {
                 lut[i] = 255;
             }
         }
