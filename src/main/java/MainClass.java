@@ -1,4 +1,5 @@
 import org.bytedeco.javacpp.indexer.FloatRawIndexer;
+import org.bytedeco.javacpp.indexer.IntRawIndexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.javacpp.opencv_core;
 import org.bytedeco.javacv.CanvasFrame;
@@ -37,6 +38,7 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
+        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_GRAYSCALE);
         opencv_core.Mat image = imread("data/tower.jpg");
         resize(image, image, new opencv_core.Size(800, 600));
         if (image == null || image.empty()) {
@@ -50,8 +52,34 @@ public class MainClass {
         //wreckedtomestleseulRGB(image);
         //histogramme(image);
         //compareImage(image, "data/Monkey/");
-        //histogrammeInteret(image);
-        matchTemplateTest();//Fonction matching du TP
+        //withLut(image);
+    }
+
+    private static void withLut(opencv_core.Mat mat) {
+        System.out.println("With inversed lut");
+        opencv_core.Mat inversedLutImage = mat.clone();
+        LUT(mat, new opencv_core.Mat(buildInversedLut()), inversedLutImage);
+        inversedLutImage.convertTo(inversedLutImage, CV_8U);
+        Show(inversedLutImage, "With inversed LUT");
+
+        System.out.println("With custom lut");
+        opencv_core.Mat customLutImage = mat.clone();
+        LUT(mat, new opencv_core.Mat(buildCustomLut()), customLutImage);
+        customLutImage.convertTo(customLutImage, CV_8U);
+        Show(customLutImage, "With custom LUT");
+
+        System.out.println("With custom 2 lut");
+        opencv_core.Mat customTwoLutImage = mat.clone();
+        LUT(mat, new opencv_core.Mat(buildCustomTwoLut()), customTwoLutImage);
+        customTwoLutImage.convertTo(customTwoLutImage, CV_8U);
+        Show(customTwoLutImage, "With custom 2 LUT");
+
+        System.out.println("With custom function lut");
+        //opencv_core.Mat lutWithCustomFunction = mat.clone();
+        //LUT(mat, new opencv_core.Mat(buildCustomTwoLut()), lutWithCustomFunction);
+        Mat afterCustomLut = applyLut(mat, buildCustomTwoLut());
+        //afterCustomLut.convertTo(afterCustomLut, CV_8U);
+        Show(afterCustomLut, "With custom function LUT");
     }
 
     private static void matchTemplateTest() {
@@ -103,7 +131,51 @@ public class MainClass {
         showHistogram(getHistogram(target1), "Rectangle Jaune", Color.yellow);
         showHistogram(getHistogram(target2), "Rectangle Vert", Color.green);
         showHistogram(getHistogram(target3), "Rectangle Bleu", Color.blue);
+    }
 
+    private static Mat applyLut(Mat image, float[] lut) {
+        Mat resultMat = image.clone();
+        UByteIndexer indexer = resultMat.createIndexer();
+        for(int x = 0; x < indexer.height(); x++) {
+            for(int y = 0; y < indexer.width(); y++) {
+                indexer.put(x, y, (int) lut[indexer.get(x, y)]);
+            }
+        }
+        return resultMat;
+    }
+
+    private static float[] buildInversedLut() {
+        float[] lut = new float[256];
+        for (int i = 0; i < lut.length; i++) {
+            lut[i] = 255 - i;
+        }
+        return lut;
+    }
+
+    private static float[] buildCustomLut() {
+        float[] lut = new float[256];
+        for(int i = 0; i < lut.length; i++) {
+            if(i <= 17) {
+                lut[i] = 0;
+            } else if (i >= 102) {
+                lut[i] = 255;
+            } else {
+                lut[i] = 3 * i;
+            }
+        }
+        return lut;
+    }
+
+    private static float[] buildCustomTwoLut() {
+        float[] lut = new float[256];
+        for(int i = 0; i < lut.length; i++) {
+            //y=(cos(((float)x/255)*2*PI - PI)+1)*255
+            lut[i] = (float) ((Math.cos(((float)i/255)*2*Math.PI - Math.PI)+1)*255);
+            if(lut[i] > 255) {
+                lut[i] = 255;
+            }
+        }
+        return lut;
     }
 
     private static void compareImage(opencv_core.Mat imgTarget, String pathRef) {
