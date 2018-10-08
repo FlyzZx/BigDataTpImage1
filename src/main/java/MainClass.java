@@ -51,47 +51,33 @@ public class MainClass {
         //histogramme(image);
         //compareImage(image, "data/Monkey/");
         //histogrammeInteret(image);
-        matchTemplateTest();
+        matchTemplateTest();//Fonction matching du TP
     }
 
     private static void matchTemplateTest() {
-        opencv_core.Mat image1 = imread("data/tower.jpg");
+        opencv_core.Mat image1 = imread("data/Mannekenpis/mannekenpis2.jpeg");
         resize(image1, image1, new opencv_core.Size(800, 600));
-
-        opencv_core.Mat image2 = imread("data/tower.jpg");
+        opencv_core.Mat image2 = imread("data/Mannekenpis/mannekenpis1.jpeg");
         resize(image2, image2, new opencv_core.Size(800, 600));
-// define a template
         opencv_core.Mat target = new opencv_core.Mat(image1, new opencv_core.Rect(385, 130, 70, 60));
         Show(target, "Template");
         rectangle(image1, new opencv_core.Rect(385, 130, 70, 60), opencv_core.Scalar.YELLOW);
-
         Show(image1,"Original");
-// define search region
-       //_core.Mat roi = new opencv_core.Mat(image2,
-// here top half of the image
-                //new opencv_core.Rect(0, 0, image2.cols(), image2.rows() / 2));
-// perform template matching
         opencv_core.Mat result = new opencv_core.Mat();
         matchTemplate(
                 image2, // search region
                 target, // template
                 result, // result
                 CV_COMP_BHATTACHARYYA);
-// similarity measure
-// find most similar location
         double[] minVal = new double[1];
         double[] maxVal = new double[1];
         opencv_core.Point minPt = new opencv_core.Point();
         opencv_core.Point maxPt = new opencv_core.Point();
-        Mat test = new opencv_core.Mat();
-        minMaxLoc(result, minVal, maxVal, minPt, maxPt, test);
+        minMaxLoc(result, minVal, maxVal, minPt, maxPt, new Mat());
         System.out.println("minPt = (" + minPt.x() + ", " + minPt.y() + ")");
-// draw rectangle at most similar location
-// at minPt in this case
         rectangle(image2, new opencv_core.Rect(maxPt.x(), maxPt.y(), target.cols(), target.rows()), opencv_core.Scalar.CYAN);
         Show(image2, "Best match");
         Show(result,"result");
-        Show(test,"test");
     }
 
     private static void histogrammeInteret(opencv_core.Mat image) {
