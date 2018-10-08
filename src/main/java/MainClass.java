@@ -1,6 +1,5 @@
-import org.bytedeco.javacpp.indexer.FloatRawIndexer;
-import org.bytedeco.javacpp.indexer.IntRawIndexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
+import org.bytedeco.javacpp.indexer.UByteRawIndexer;
 import org.bytedeco.javacpp.opencv_core;
 import org.bytedeco.javacv.CanvasFrame;
 import org.bytedeco.javacv.OpenCVFrameConverter;
@@ -12,9 +11,9 @@ import java.io.File;
 import java.util.ArrayList;
 
 import static org.bytedeco.javacpp.opencv_core.*;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
-import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
+
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
+
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 public class MainClass {
@@ -27,15 +26,85 @@ public class MainClass {
 
     }
 
-    private void showMat(opencv_core.Mat m) {
+    private static void showMat(opencv_core.Mat m) {
 
-        FloatRawIndexer ind = m.createIndexer();
+        UByteRawIndexer ind = m.createIndexer();
         for (int rows = 0; rows < m.rows(); rows++) {
             for (int cols = 0; cols < m.cols(); cols++) {
-                System.out.print(ind.get(rows, cols));
+                System.out.print(ind.get(rows, cols) + " ");
             }
             System.out.println("");
         }
+    }
+
+    private static void segmentationKmeans(Mat image) {
+        //Reshape en vecteur n-dims
+        Mat reshaped_image = image.reshape(1, image.cols() * image.rows());
+        Mat reshaped_image32f = new Mat();
+        reshaped_image.convertTo(reshaped_image32f, CV_32F);
+
+        //KMEANS.
+        int clusterCount = 4;
+        Mat labels = new Mat();
+        Mat centers = new Mat();
+        TermCriteria criteria = new TermCriteria(TermCriteria.MAX_ITER + TermCriteria.EPS, 10, 1.0);
+        kmeans(reshaped_image32f, clusterCount, labels, criteria, 10, KMEANS_PP_CENTERS, centers);
+
+        //Reshape des labels pour affichage
+        centers.convertTo(centers, CV_8U);
+        Show(centers, "Clustering centers");
+
+        Mat labelsShow  = new Mat();
+        labels.convertTo(labelsShow, CV_8U,256/clusterCount,3);
+        labels.convertTo(labels,CV_8U);
+
+        UByteRawIndexer centerIndexer = centers.createIndexer();
+
+        labels = labels.reshape(1,image.rows());
+        labelsShow = labelsShow.reshape(1,image.rows());
+        Show(labelsShow,"labels");
+        UByteRawIndexer labelsIndexer = labels.createIndexer();
+
+        int centerHeight =(int)centerIndexer.sizes()[0];
+        int centerWidth =(int)centerIndexer.sizes()[1];
+        ArrayList<int[]> colors = new ArrayList<int[]>();
+        for(int i = 0 ; i< centerHeight ; i++){
+            int[] temp = new int[centerWidth];
+            temp[0] = centerIndexer.get(i,0);
+            temp[1] = centerIndexer.get(i,1);
+            temp[2] = centerIndexer.get(i,2);
+            colors.add(temp);
+        }
+
+        Mat r = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer rIndexer = r.createIndexer();
+        Mat g = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer gIndexer = g.createIndexer();
+        Mat b = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer bIndexer = b.createIndexer();
+
+        for(int i = 0 ; i < labels.rows();i++){
+            for(int j = 0 ; j < labels.cols();j++){
+               int[] couleur = colors.get(labelsIndexer.get(i,j));
+               rIndexer.put(i,j,couleur[0]);
+               gIndexer.put(i,j,couleur[1]);
+               bIndexer.put(i,j,couleur[2]);
+            }
+        }
+
+        Show(r,"r");
+        Show(g,"g");
+        Show(b,"b");
+
+        Mat resultats  = new Mat(600,800,CV_8UC3);
+
+        MatVector rgb = new MatVector();
+        rgb.push_back(r);
+        rgb.push_back(g);
+        rgb.push_back(b);
+        merge(rgb,resultats);
+        UByteRawIndexer resultIndexerDebug = resultats.createIndexer();
+        Show(resultats, "Quantization results");
     }
 
     public static void main(String[] args) {
@@ -46,13 +115,16 @@ public class MainClass {
         }
 
         //System.out.println("image" + image.cols() + "	x	" + image.rows());
-        //Show(image, "original");
+        Show(image, "original");
 
         //morpho(image);
         //wreckedtomestleseulRGB(image);
         //histogramme(image);
         //compareImage(image, "data/Monkey/");
         //withLut(image);
+
+        segmentationKmeans(image);
+
     }
 
     private static void withLut(opencv_core.Mat mat) {
@@ -136,8 +208,8 @@ public class MainClass {
     private static Mat applyLut(Mat image, float[] lut) {
         Mat resultMat = image.clone();
         UByteIndexer indexer = resultMat.createIndexer();
-        for(int x = 0; x < indexer.height(); x++) {
-            for(int y = 0; y < indexer.width(); y++) {
+        for (int x = 0; x < indexer.height(); x++) {
+            for (int y = 0; y < indexer.width(); y++) {
                 indexer.put(x, y, (int) lut[indexer.get(x, y)]);
             }
         }
@@ -154,8 +226,8 @@ public class MainClass {
 
     private static float[] buildCustomLut() {
         float[] lut = new float[256];
-        for(int i = 0; i < lut.length; i++) {
-            if(i <= 17) {
+        for (int i = 0; i < lut.length; i++) {
+            if (i <= 17) {
                 lut[i] = 0;
             } else if (i >= 102) {
                 lut[i] = 255;
@@ -168,10 +240,10 @@ public class MainClass {
 
     private static float[] buildCustomTwoLut() {
         float[] lut = new float[256];
-        for(int i = 0; i < lut.length; i++) {
+        for (int i = 0; i < lut.length; i++) {
             //y=(cos(((float)x/255)*2*PI - PI)+1)*255
-            lut[i] = (float) ((Math.cos(((float)i/255)*2*Math.PI - Math.PI)+1)*255);
-            if(lut[i] > 255) {
+            lut[i] = (float) ((Math.cos(((float) i / 255) * 2 * Math.PI - Math.PI) + 1) * 255);
+            if (lut[i] > 255) {
                 lut[i] = 255;
             }
         }
