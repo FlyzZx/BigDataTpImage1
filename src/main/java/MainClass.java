@@ -12,6 +12,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
@@ -38,8 +39,7 @@ public class MainClass {
     }
 
     public static void main(String[] args) {
-        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_GRAYSCALE);
-        opencv_core.Mat image = imread("data/tower.jpg");
+        opencv_core.Mat image = imread("data/tower.jpg", IMREAD_COLOR);
         resize(image, image, new opencv_core.Size(800, 600));
         if (image == null || image.empty()) {
             return;
