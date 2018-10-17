@@ -1,6 +1,8 @@
+import org.bytedeco.javacpp.indexer.DoubleRawIndexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.javacpp.indexer.UByteRawIndexer;
 import org.bytedeco.javacpp.opencv_core;
+import org.bytedeco.javacpp.opencv_ml;
 import org.bytedeco.javacv.CanvasFrame;
 import org.bytedeco.javacv.OpenCVFrameConverter;
 
@@ -37,7 +39,31 @@ public class MainClass {
         }
     }
 
-    private static void segmentationKmeans(Mat image) {
+    private static void splitRGBShow(Mat image,boolean R,boolean G, boolean B){
+        opencv_core.MatVector rgbSplit = new opencv_core.MatVector();
+        opencv_core.MatVector choosenSplit = new opencv_core.MatVector();
+        Mat red = new Mat(image.rows(),image.cols(),CV_8UC1);
+        Mat green = new Mat(image.rows(),image.cols(),CV_8UC1);
+        Mat blue = new Mat(image.rows(),image.cols(),CV_8UC1);
+        Mat result = new Mat();
+        String windowName = "";
+        split(image, rgbSplit);
+
+        if(R){red = rgbSplit.get(2);windowName += "R";}
+        if(G){green = rgbSplit.get(1);windowName += "G";}
+        if(B){blue = rgbSplit.get(0);windowName += "B";}
+
+        choosenSplit.push_back(blue);
+        choosenSplit.push_back(green);
+        choosenSplit.push_back(red);
+        merge(choosenSplit,result);
+        String name = windowName.replaceAll("(?<=.)(?=.)","+");
+        Show(result, name);
+
+    }
+
+
+    private static void segmentationKmeansRGB(Mat image) {
         //Reshape en vecteur n-dims
         Mat reshaped_image = image.reshape(1, image.cols() * image.rows());
         Mat reshaped_image32f = new Mat();
@@ -104,12 +130,89 @@ public class MainClass {
         rgb.push_back(b);
         merge(rgb,resultats);
         UByteRawIndexer resultIndexerDebug = resultats.createIndexer();
-        Show(resultats, "Quantization results");
+        Show(resultats, "Quantization results RGB");
+    }
+
+    private static void segmentationKmeansHSV(Mat image) {
+        Mat hsvImage = new Mat();
+        cvtColor(image,hsvImage,CV_BGR2HSV);
+        image = hsvImage;
+        //Reshape en vecteur n-dims
+        Mat reshaped_image = image.reshape(1, image.cols() * image.rows());
+        Mat reshaped_image32f = new Mat();
+        reshaped_image.convertTo(reshaped_image32f, CV_32F);
+
+        //KMEANS.
+        int clusterCount = 4;
+        Mat labels = new Mat();
+        Mat centers = new Mat();
+        TermCriteria criteria = new TermCriteria(TermCriteria.MAX_ITER + TermCriteria.EPS, 10, 1.0);
+        kmeans(reshaped_image32f, clusterCount, labels, criteria, 10, KMEANS_PP_CENTERS, centers);
+
+        //Reshape des labels pour affichage
+        centers.convertTo(centers, CV_8U);
+        Show(centers, "Clustering centers");
+
+        Mat labelsShow  = new Mat();
+        labels.convertTo(labelsShow, CV_8U,256/clusterCount,3);
+        labels.convertTo(labels,CV_8U);
+
+        UByteRawIndexer centerIndexer = centers.createIndexer();
+
+        labels = labels.reshape(1,image.rows());
+        labelsShow = labelsShow.reshape(1,image.rows());
+        Show(labelsShow,"labels");
+        UByteRawIndexer labelsIndexer = labels.createIndexer();
+
+        int centerHeight =(int)centerIndexer.sizes()[0];
+        int centerWidth =(int)centerIndexer.sizes()[1];
+        ArrayList<int[]> colors = new ArrayList<int[]>();
+        for(int i = 0 ; i< centerHeight ; i++){
+            int[] temp = new int[centerWidth];
+            temp[0] = centerIndexer.get(i,0);
+            temp[1] = centerIndexer.get(i,1);
+            temp[2] = centerIndexer.get(i,2);
+            colors.add(temp);
+        }
+
+        Mat r = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer rIndexer = r.createIndexer();
+        Mat g = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer gIndexer = g.createIndexer();
+        Mat b = new Mat(600,800,CV_8UC1);
+        UByteRawIndexer bIndexer = b.createIndexer();
+
+        for(int i = 0 ; i < labels.rows();i++){
+            for(int j = 0 ; j < labels.cols();j++){
+                int[] couleur = colors.get(labelsIndexer.get(i,j));
+                rIndexer.put(i,j,couleur[0]);
+                gIndexer.put(i,j,couleur[1]);
+                bIndexer.put(i,j,couleur[2]);
+            }
+        }
+
+        Show(r,"h");
+        Show(g,"s");
+        Show(b,"v");
+
+        Mat resultats  = new Mat(600,800,CV_8UC3);
+
+        MatVector rgb = new MatVector();
+        rgb.push_back(g);
+        rgb.push_back(r);
+        rgb.push_back(b);
+        merge(rgb,resultats);
+        resultats.convertTo(resultats,CV_HSV2BGR);
+        resultats.convertTo(resultats,CV_8UC3);
+        //DoubleRawIndexer resultIndexerDebug = resultats.createIndexer();
+        Show(resultats, "Quantization results HSV");
     }
 
     public static void main(String[] args) {
         opencv_core.Mat image = imread("data/tower.jpg", IMREAD_COLOR);
+
         resize(image, image, new opencv_core.Size(800, 600));
+        //image.convertTo(image,CV_BGR2RGB);
         if (image == null || image.empty()) {
             return;
         }
@@ -123,7 +226,16 @@ public class MainClass {
         //compareImage(image, "data/Monkey/");
         //withLut(image);
 
-        segmentationKmeans(image);
+        //segmentationKmeansHSV(image);
+
+        Mat cercle = imread("data/Cercle.png",IMREAD_COLOR);
+        splitRGBShow(cercle,true,false,false);
+        splitRGBShow(cercle,false,true,false);
+        splitRGBShow(cercle,false,false,true);
+        splitRGBShow(cercle,true,true,false);
+        splitRGBShow(cercle,false,true,true);
+        splitRGBShow(cercle,true,false,true);
+        splitRGBShow(cercle,true,true,true);
 
     }
 
