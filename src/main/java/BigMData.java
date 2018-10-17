@@ -542,7 +542,9 @@ public class BigMData {
         Show(image, "Détection des visages");
     }
 
-    public static void trainFace(Mat image) {
+
+
+    public static void trainFace() {
         System.out.println("Training...");
         opencv_face.FaceRecognizer faceRecognizer = opencv_face.LBPHFaceRecognizer.create();
         String trainingDir = "data/Face/Dection_faces";
@@ -585,12 +587,53 @@ public class BigMData {
 
         faceRecognizer.train(images, labels);
         faceRecognizer.save("data/training.xml");
+    }
 
+    public static int prediction(Mat image){
         System.out.println("Testing...");
-        faceRecognizer = opencv_face.LBPHFaceRecognizer.create();
+        opencv_face.FaceRecognizer faceRecognizer = opencv_face.LBPHFaceRecognizer.create();
         faceRecognizer.read("data/training.xml");
 
+
         int prediction = faceRecognizer.predict_label(image);
-        System.out.println("prediction:" + prediction);
+        return prediction;
+    }
+
+    public static void cropImage(String imgName){
+        opencv_core.Mat image = imread(imgName, CV_LOAD_IMAGE_COLOR);
+        opencv_core.Mat gray = imread(imgName, CV_LOAD_IMAGE_GRAYSCALE);
+
+        opencv_objdetect.CascadeClassifier face_cascade = new opencv_objdetect.CascadeClassifier("data/resources/haarcascade_frontalface_alt.xml");opencv_objdetect.CascadeClassifier smile_cascade = new opencv_objdetect.CascadeClassifier("data/resources/haarcascades/haarcascade_eye.xml");
+        RectVector faces = new RectVector();
+
+        // Find the faces in “image”:
+        face_cascade.detectMultiScale(image, faces);
+
+
+
+        for (int i = 0; i < faces.size(); i++) {
+            Rect face_i = faces.get(i);
+            //Mat face = new Mat(videoMatGray, face_i);
+            // If fisher face recognizer is used, the face need to be resized.
+            // resize(face, face_resized, new Size(im_width, im_height), 1.0, 1.0,INTER_CUBIC);
+            // Now perform the prediction, see how easy that is:
+            opencv_face.FaceRecognizer faceRecognizer = opencv_face.LBPHFaceRecognizer.create();
+            int prediction = prediction(gray);
+            // And finally write all we've found out to the original image!
+            // First of all draw a green rectangle around the detected face:
+            rectangle(image, face_i, new Scalar(0, 255, 0, 1));
+            // Create the text we will annotate the box with:
+            String box_text = "Prediction = " + prediction;
+            // Calculate the position for annotated text (make sure we don't
+            // put illegal values in there):
+            int pos_x = Math.max(face_i.tl().x() - 10, 0);
+            int pos_y = Math.max(face_i.tl().y() - 10, 0);
+            // And now put it into the image:
+            putText(image, box_text, new opencv_core.Point(pos_x, pos_y), FONT_HERSHEY_PLAIN, 1.0, new
+                    Scalar(0, 255, 0, 2.0));
+        }
+        // Show the result:
+        // imshow("face_recognizer", imageMat);
+        Show(image, "face_recognizer");
     }
 }
