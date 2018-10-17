@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import static org.bytedeco.javacpp.opencv_imgcodecs.CV_LOAD_IMAGE_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
 import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
 import static org.bytedeco.javacpp.opencv_imgproc.resize;
@@ -21,6 +22,8 @@ public class MainForm extends JFrame {
     private JButton siftMatching;
     private JButton compare;
     private JButton rgbSplit;
+    private JButton detectFace;
+    private JButton trainFace;
 
     public MainForm(opencv_core.Mat inputMat) throws HeadlessException {
         this.add(jPanel);
@@ -86,6 +89,18 @@ public class MainForm extends JFrame {
             }
         });
 
+        detectFace.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                opencv_core.Mat face = imread("data/face.jpg",IMREAD_COLOR);
+                BigMData.detectFace(face);
+            }
+        });
 
+        trainFace.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                opencv_core.Mat face = imread("data/bill.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+                BigMData.trainFace(face);
+            }
+        });
     }
 }

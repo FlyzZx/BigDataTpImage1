@@ -8,18 +8,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FilenameFilter;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.TreeMap;
 
 import static org.bytedeco.javacpp.opencv_core.*;
-import static org.bytedeco.javacpp.opencv_core.CV_8U;
-import static org.bytedeco.javacpp.opencv_core.split;
 import static org.bytedeco.javacpp.opencv_features2d.drawKeypoints;
 import static org.bytedeco.javacpp.opencv_features2d.drawMatches;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
-import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
-import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
 import static org.bytedeco.javacpp.opencv_imgproc.*;
 
 public class BigMData {
@@ -59,55 +58,55 @@ public class BigMData {
         centers.convertTo(centers, CV_8U);
         Show(centers, "Clustering centers");
 
-        Mat labelsShow  = new Mat();
-        labels.convertTo(labelsShow, CV_8U,256/clusterCount,3);
-        labels.convertTo(labels,CV_8U);
+        Mat labelsShow = new Mat();
+        labels.convertTo(labelsShow, CV_8U, 256 / clusterCount, 3);
+        labels.convertTo(labels, CV_8U);
 
         UByteRawIndexer centerIndexer = centers.createIndexer();
 
-        labels = labels.reshape(1,image.rows());
-        labelsShow = labelsShow.reshape(1,image.rows());
-        Show(labelsShow,"labels");
+        labels = labels.reshape(1, image.rows());
+        labelsShow = labelsShow.reshape(1, image.rows());
+        Show(labelsShow, "labels");
         UByteRawIndexer labelsIndexer = labels.createIndexer();
 
-        int centerHeight =(int)centerIndexer.sizes()[0];
-        int centerWidth =(int)centerIndexer.sizes()[1];
+        int centerHeight = (int) centerIndexer.sizes()[0];
+        int centerWidth = (int) centerIndexer.sizes()[1];
         ArrayList<int[]> colors = new ArrayList<int[]>();
-        for(int i = 0 ; i< centerHeight ; i++){
+        for (int i = 0; i < centerHeight; i++) {
             int[] temp = new int[centerWidth];
-            temp[0] = centerIndexer.get(i,0);
-            temp[1] = centerIndexer.get(i,1);
-            temp[2] = centerIndexer.get(i,2);
+            temp[0] = centerIndexer.get(i, 0);
+            temp[1] = centerIndexer.get(i, 1);
+            temp[2] = centerIndexer.get(i, 2);
             colors.add(temp);
         }
 
-        Mat r = new Mat(600,800,CV_8UC1);
+        Mat r = new Mat(600, 800, CV_8UC1);
         UByteRawIndexer rIndexer = r.createIndexer();
-        Mat g = new Mat(600,800,CV_8UC1);
+        Mat g = new Mat(600, 800, CV_8UC1);
         UByteRawIndexer gIndexer = g.createIndexer();
-        Mat b = new Mat(600,800,CV_8UC1);
+        Mat b = new Mat(600, 800, CV_8UC1);
         UByteRawIndexer bIndexer = b.createIndexer();
 
-        for(int i = 0 ; i < labels.rows();i++){
-            for(int j = 0 ; j < labels.cols();j++){
-                int[] couleur = colors.get(labelsIndexer.get(i,j));
-                rIndexer.put(i,j,couleur[0]);
-                gIndexer.put(i,j,couleur[1]);
-                bIndexer.put(i,j,couleur[2]);
+        for (int i = 0; i < labels.rows(); i++) {
+            for (int j = 0; j < labels.cols(); j++) {
+                int[] couleur = colors.get(labelsIndexer.get(i, j));
+                rIndexer.put(i, j, couleur[0]);
+                gIndexer.put(i, j, couleur[1]);
+                bIndexer.put(i, j, couleur[2]);
             }
         }
 
-        Show(r,"r");
-        Show(g,"g");
-        Show(b,"b");
+        Show(r, "r");
+        Show(g, "g");
+        Show(b, "b");
 
-        Mat resultats  = new Mat(600,800,CV_8UC3);
+        Mat resultats = new Mat(600, 800, CV_8UC3);
 
         MatVector rgb = new MatVector();
         rgb.push_back(r);
         rgb.push_back(g);
         rgb.push_back(b);
-        merge(rgb,resultats);
+        merge(rgb, resultats);
         UByteRawIndexer resultIndexerDebug = resultats.createIndexer();
         Show(resultats, "Quantization results");
     }
@@ -147,7 +146,7 @@ public class BigMData {
         opencv_core.Mat target = new opencv_core.Mat(image1, new opencv_core.Rect(385, 130, 70, 60));
         Show(target, "Template");
         rectangle(image1, new opencv_core.Rect(385, 130, 70, 60), opencv_core.Scalar.YELLOW);
-        Show(image1,"Original");
+        Show(image1, "Original");
         opencv_core.Mat result = new opencv_core.Mat();
         matchTemplate(
                 image2, // search region
@@ -162,7 +161,7 @@ public class BigMData {
         System.out.println("minPt = (" + minPt.x() + ", " + minPt.y() + ")");
         rectangle(image2, new opencv_core.Rect(maxPt.x(), maxPt.y(), target.cols(), target.rows()), opencv_core.Scalar.CYAN);
         Show(image2, "Best match");
-        Show(result,"result");
+        Show(result, "result");
     }
 
     public static void histogrammeInteret(opencv_core.Mat image) {
@@ -283,8 +282,8 @@ public class BigMData {
         File srcData = new File("data/Train/");
         DMatchVector matches = new DMatchVector();
         opencv_features2d.BFMatcher matcher = new opencv_features2d.BFMatcher(NORM_L2, false);
-        for(File folder : srcData.listFiles()) {
-            for(File f : folder.listFiles()) {
+        for (File folder : srcData.listFiles()) {
+            for (File f : folder.listFiles()) {
                 //System.out.println("Extracting for " + f.getName() + "...");
                 Mat current = imread(f.getAbsolutePath(), IMREAD_COLOR);
                 resize(current, current, new opencv_core.Size(800, 600));
@@ -299,7 +298,7 @@ public class BigMData {
                 m = selectBest(m, 25);
 
                 double moyenne = 0.0;
-                for(DMatch match : m.get()) {
+                for (DMatch match : m.get()) {
                     moyenne += match.distance();
                 }
 
@@ -488,25 +487,110 @@ public class BigMData {
         return result;
     }
 
-    public static void splitRGBShow(opencv_core.Mat image, boolean R, boolean G, boolean B){
+    public static void splitRGBShow(opencv_core.Mat image, boolean R, boolean G, boolean B) {
         opencv_core.MatVector rgbSplit = new opencv_core.MatVector();
         opencv_core.MatVector choosenSplit = new opencv_core.MatVector();
-        opencv_core.Mat red = new opencv_core.Mat(image.rows(),image.cols(),CV_8UC1);
-        opencv_core.Mat green = new opencv_core.Mat(image.rows(),image.cols(),CV_8UC1);
-        opencv_core.Mat blue = new opencv_core.Mat(image.rows(),image.cols(),CV_8UC1);
+        opencv_core.Mat red = new opencv_core.Mat(image.rows(), image.cols(), CV_8UC1);
+        opencv_core.Mat green = new opencv_core.Mat(image.rows(), image.cols(), CV_8UC1);
+        opencv_core.Mat blue = new opencv_core.Mat(image.rows(), image.cols(), CV_8UC1);
         opencv_core.Mat result = new opencv_core.Mat();
         String windowName = "";
         split(image, rgbSplit);
 
-        if(R){red = rgbSplit.get(2);windowName += "R";}
-        if(G){green = rgbSplit.get(1);windowName += "G";}
-        if(B){blue = rgbSplit.get(0);windowName += "B";}
+        if (R) {
+            red = rgbSplit.get(2);
+            windowName += "R";
+        }
+        if (G) {
+            green = rgbSplit.get(1);
+            windowName += "G";
+        }
+        if (B) {
+            blue = rgbSplit.get(0);
+            windowName += "B";
+        }
 
         choosenSplit.push_back(blue);
         choosenSplit.push_back(green);
         choosenSplit.push_back(red);
-        merge(choosenSplit,result);
-        String name = windowName.replaceAll("(?<=.)(?=.)","+");
+        merge(choosenSplit, result);
+        String name = windowName.replaceAll("(?<=.)(?=.)", "+");
         Show(result, name);
+    }
+
+    public static void detectFace(opencv_core.Mat image) {
+        opencv_objdetect.CascadeClassifier face_cascade = new opencv_objdetect.CascadeClassifier("data/resources/haarcascade_frontalface_alt.xml");
+        opencv_objdetect.CascadeClassifier smile_cascade = new opencv_objdetect.CascadeClassifier("data/resources/haarcascades/haarcascade_eye.xml");
+
+        RectVector faces = new RectVector();
+        RectVector smiles = new RectVector();
+        // Find the faces in “image”:
+        face_cascade.detectMultiScale(image, faces);
+        smile_cascade.detectMultiScale(image, smiles);
+
+        for (int i = 0; i < faces.size(); i++) {
+            Rect face_i = faces.get(i);
+            Mat face = new Mat(image, face_i);
+            rectangle(image, face_i, new Scalar(0, 255, 0, 1));
+        }
+        for (int i = 0; i < smiles.size(); i++) {
+            Rect smile = smiles.get(i);
+            Mat face = new Mat(image, smile);
+            rectangle(image, smile, new Scalar(255, 0, 0, 1));
+        }
+        // Show the result:
+        Show(image, "Détection des visages");
+    }
+
+    public static void trainFace(Mat image) {
+        System.out.println("Training...");
+        opencv_face.FaceRecognizer faceRecognizer = opencv_face.LBPHFaceRecognizer.create();
+        String trainingDir = "data/Face/Dection_faces";
+        File root = new File(trainingDir);
+        FilenameFilter imgFilter = new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                name = name.toLowerCase();
+                return name.endsWith(".jpg") || name.endsWith(".pgm") || name.endsWith(".png");
+            }
+        };
+
+        //File[] imageFiles = root.listFiles(imgFilter);
+
+
+        MatVector images = new MatVector(root.listFiles().length);
+
+        Mat labels = new Mat(root.listFiles().length, 1, CV_32SC1);
+        IntBuffer labelsBuf = labels.createBuffer();
+
+        int counter = 0;
+
+        HashMap<String, Integer> tamere = new HashMap<>();
+        tamere.put("benj;1", 1);
+        tamere.put("jor", 2);
+        tamere.put("thom", 3);
+        tamere.put("andre", 4);
+        tamere.put("dam", 5);
+
+
+        for (File im : root.listFiles()) {
+            //System.out.println("path:" + image.getAbsolutePath());
+            Mat img = imread(im.getAbsolutePath(), CV_LOAD_IMAGE_GRAYSCALE);
+            //System.out.println(Integer.parseInt(im.getName().split("-.")[0]));
+            int label = Integer.parseInt(im.getName().split("_")[0]);
+            images.put(counter, img);
+            labelsBuf.put(counter, label);
+            counter++;
+            //  System.out.println("path:" + counter);
+        }
+
+        faceRecognizer.train(images, labels);
+        faceRecognizer.save("data/training.xml");
+
+        System.out.println("Testing...");
+        faceRecognizer = opencv_face.LBPHFaceRecognizer.create();
+        faceRecognizer.read("data/training.xml");
+
+        int prediction = faceRecognizer.predict_label(image);
+        System.out.println("prediction:" + prediction);
     }
 }
