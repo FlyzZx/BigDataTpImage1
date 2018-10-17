@@ -25,10 +25,9 @@ public class BigMData {
         CanvasFrame canvas = new CanvasFrame(title, 1);
         canvas.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         canvas.showImage(converter.convert(mat));
-
     }
 
-    private static void showMat(opencv_core.Mat m) {
+    public static void showMat(opencv_core.Mat m) {
 
         UByteRawIndexer ind = m.createIndexer();
         for (int rows = 0; rows < m.rows(); rows++) {
@@ -39,7 +38,7 @@ public class BigMData {
         }
     }
 
-    private static void segmentationKmeans(opencv_core.Mat image) {
+    public static void segmentationKmeans(opencv_core.Mat image) {
         //Reshape en vecteur n-dims
         opencv_core.Mat reshaped_image = image.reshape(1, image.cols() * image.rows());
         opencv_core.Mat reshaped_image32f = new opencv_core.Mat();
@@ -109,7 +108,7 @@ public class BigMData {
         Show(resultats, "Quantization results");
     }
 
-    private static void withLut(opencv_core.Mat mat) {
+    public static void withLut(opencv_core.Mat mat) {
         System.out.println("With inversed lut");
         opencv_core.Mat inversedLutImage = mat.clone();
         LUT(mat, new opencv_core.Mat(buildInversedLut()), inversedLutImage);
@@ -136,7 +135,7 @@ public class BigMData {
         Show(afterCustomLut, "With custom function LUT");
     }
 
-    private static void matchTemplateTest() {
+    public static void matchTemplateTest() {
         opencv_core.Mat image1 = imread("data/Mannekenpis/mannekenpis2.jpeg");
         resize(image1, image1, new opencv_core.Size(800, 600));
         opencv_core.Mat image2 = imread("data/Mannekenpis/mannekenpis1.jpeg");
@@ -162,7 +161,7 @@ public class BigMData {
         Show(result,"result");
     }
 
-    private static void histogrammeInteret(opencv_core.Mat image) {
+    public static void histogrammeInteret(opencv_core.Mat image) {
         //Découpe les rectangles sur l'images
         opencv_core.Mat target1 = new opencv_core.Mat(image, new opencv_core.Rect(120, 40, 30, 30));
         opencv_core.Mat target2 = new opencv_core.Mat(image, new opencv_core.Rect(250, 80, 30, 30));
@@ -187,7 +186,7 @@ public class BigMData {
         showHistogram(getHistogram(target3), "Rectangle Bleu", Color.blue);
     }
 
-    private static Mat applyLut(Mat image, float[] lut) {
+    public static Mat applyLut(Mat image, float[] lut) {
         Mat resultMat = image.clone();
         UByteIndexer indexer = resultMat.createIndexer();
         for (int x = 0; x < indexer.height(); x++) {
@@ -198,7 +197,7 @@ public class BigMData {
         return resultMat;
     }
 
-    private static float[] buildInversedLut() {
+    public static float[] buildInversedLut() {
         float[] lut = new float[256];
         for (int i = 0; i < lut.length; i++) {
             lut[i] = 255 - i;
@@ -206,7 +205,7 @@ public class BigMData {
         return lut;
     }
 
-    private static float[] buildCustomLut() {
+    public static float[] buildCustomLut() {
         float[] lut = new float[256];
         for (int i = 0; i < lut.length; i++) {
             if (i <= 17) {
@@ -220,7 +219,7 @@ public class BigMData {
         return lut;
     }
 
-    private static float[] buildCustomTwoLut() {
+    public static float[] buildCustomTwoLut() {
         float[] lut = new float[256];
         for (int i = 0; i < lut.length; i++) {
             //y=(cos(((float)x/255)*2*PI - PI)+1)*255
@@ -232,7 +231,7 @@ public class BigMData {
         return lut;
     }
 
-    private static void compareImage(opencv_core.Mat imgTarget, String pathRef) {
+    public static void compareImage(opencv_core.Mat imgTarget, String pathRef) {
         ArrayList<opencv_core.Mat> descriptorsRef = new ArrayList<opencv_core.Mat>();
         File trainFolder = new File(pathRef);
         if (trainFolder.isDirectory()) {
@@ -255,7 +254,7 @@ public class BigMData {
         }
     }
 
-    private static void histogramme(opencv_core.Mat image) {
+    public static void histogramme(opencv_core.Mat image) {
         opencv_core.Mat gray = new opencv_core.Mat(image.size());
         cvtColor(image, gray, CV_RGB2GRAY);
         Show(gray, "Gray");
@@ -322,13 +321,13 @@ public class BigMData {
         return m;
     }
 
-    private static double compareHistogram(opencv_core.Mat histo1, opencv_core.Mat histo2, int comparisonMethod) {
+    public static double compareHistogram(opencv_core.Mat histo1, opencv_core.Mat histo2, int comparisonMethod) {
         double similarite = compareHist(histo1, histo2, comparisonMethod);
         //System.out.println("Similarité :" + similarite);
         return similarite;
     }
 
-    private static void wreckedtomestleseulRGB(opencv_core.Mat image) {
+    public static void wreckedtomestleseulRGB(opencv_core.Mat image) {
         opencv_core.MatVector rgbSplit = new opencv_core.MatVector();
         split(image, rgbSplit);
         Show(rgbSplit.get(0), "Red");
@@ -341,7 +340,7 @@ public class BigMData {
 
     }
 
-    private static void morpho(opencv_core.Mat image) {
+    public static void morpho(opencv_core.Mat image) {
         //Thresh
         opencv_core.Mat thresh = new opencv_core.Mat(image.size());
         threshold(image, thresh, 120, 255, THRESH_BINARY_INV);

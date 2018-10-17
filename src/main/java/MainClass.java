@@ -1,20 +1,11 @@
-import org.bytedeco.javacpp.indexer.UByteIndexer;
-import org.bytedeco.javacpp.indexer.UByteRawIndexer;
-import org.bytedeco.javacpp.opencv_core;
-import org.bytedeco.javacv.CanvasFrame;
-import org.bytedeco.javacv.OpenCVFrameConverter;
-
 import javax.swing.*;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.util.ArrayList;
 
-import static org.bytedeco.javacpp.opencv_core.*;
-
-import static org.bytedeco.javacpp.opencv_imgcodecs.*;
-
-import static org.bytedeco.javacpp.opencv_imgproc.*;
+import static org.bytedeco.javacpp.opencv_core.Mat;
+import static org.bytedeco.javacpp.opencv_core.Size;
+import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
+import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
+import static org.bytedeco.javacpp.opencv_imgproc.resize;
 
 public class MainClass {
 
