@@ -20,6 +20,7 @@ public class MainForm extends JFrame {
     private JPanel jPanel;
     private JButton siftMatching;
     private JButton compare;
+    private JButton rgbSplit;
 
     public MainForm(opencv_core.Mat inputMat) throws HeadlessException {
         this.add(jPanel);
@@ -71,5 +72,20 @@ public class MainForm extends JFrame {
                 BigMData.siftTraining(inputMat);
             }
         });
+
+        rgbSplit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                opencv_core.Mat cercle = imread("data/Cercle.png",IMREAD_COLOR);
+                BigMData.splitRGBShow(cercle,true,false,false);
+                BigMData.splitRGBShow(cercle,false,true,false);
+                BigMData.splitRGBShow(cercle,false,false,true);
+                BigMData.splitRGBShow(cercle,true,true,false);
+                BigMData.splitRGBShow(cercle,false,true,true);
+                BigMData.splitRGBShow(cercle,true,false,true);
+                BigMData.splitRGBShow(cercle,true,true,true);
+            }
+        });
+
+
     }
 }
