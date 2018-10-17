@@ -1,6 +1,6 @@
+import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.javacpp.indexer.UByteRawIndexer;
-import org.bytedeco.javacpp.opencv_core;
 import org.bytedeco.javacv.CanvasFrame;
 import org.bytedeco.javacv.OpenCVFrameConverter;
 
@@ -9,10 +9,14 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.TreeMap;
 
 import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.opencv_core.CV_8U;
 import static org.bytedeco.javacpp.opencv_core.split;
+import static org.bytedeco.javacpp.opencv_features2d.drawKeypoints;
+import static org.bytedeco.javacpp.opencv_features2d.drawMatches;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_COLOR;
 import static org.bytedeco.javacpp.opencv_imgcodecs.IMREAD_GRAYSCALE;
 import static org.bytedeco.javacpp.opencv_imgcodecs.imread;
@@ -23,7 +27,7 @@ public class BigMData {
     public static void Show(opencv_core.Mat mat, String title) {
         OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
         CanvasFrame canvas = new CanvasFrame(title, 1);
-        canvas.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        canvas.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         canvas.showImage(converter.convert(mat));
     }
 
@@ -254,6 +258,60 @@ public class BigMData {
         }
     }
 
+    public static void siftTraining(Mat image) {
+        //Calcul Sift pour l'image de test
+        System.out.println("Extracting descriptors from test picture...");
+        TreeMap<String, Mat> trainDescriptors = new TreeMap<>();
+        KeyPointVector kpTest = new KeyPointVector();
+        Mat descriptorsTest = new Mat();
+        int nFeatures = 0;
+        int nOctaveLayers = 3;
+        double contrastThreshold = 0.03;
+        int edgeThreshold = 10;
+        double sigma = 1.6;
+        Loader.load(opencv_calib3d.class);
+        Loader.load(opencv_shape.class);
+
+        opencv_xfeatures2d.SIFT sift;
+
+        sift = opencv_xfeatures2d.SIFT.create(nFeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma);
+        sift.detect(image, kpTest);
+        sift.compute(image, kpTest, descriptorsTest);
+
+        //Récupération des descripteurs de référence
+        System.out.println("Extracting descriptors from train pictures...");
+        File srcData = new File("data/Train/");
+        DMatchVector matches = new DMatchVector();
+        opencv_features2d.BFMatcher matcher = new opencv_features2d.BFMatcher(NORM_L2, false);
+        for(File folder : srcData.listFiles()) {
+            for(File f : folder.listFiles()) {
+                //System.out.println("Extracting for " + f.getName() + "...");
+                Mat current = imread(f.getAbsolutePath(), IMREAD_COLOR);
+                resize(current, current, new opencv_core.Size(800, 600));
+                KeyPointVector kpCurrent = new KeyPointVector();
+                Mat descCurrent = new Mat();
+
+                sift.detect(current, kpCurrent);
+                sift.compute(current, kpCurrent, descCurrent);
+                //trainDescriptors.put(f.getName(), descCurrent);
+                DMatchVector m = new DMatchVector();
+                matcher.match(descriptorsTest, descCurrent, m);
+                m = selectBest(m, 25);
+
+                double moyenne = 0.0;
+                for(DMatch match : m.get()) {
+                    moyenne += match.distance();
+                }
+
+                moyenne = moyenne / m.size();
+                //matches.put(m);
+                //System.out.println("Matches found for " + f.getName() + " : " + m.size());
+                //Calcul distance euclidienne
+                System.out.println("Distance for " + f.getName() + " : " + moyenne);
+            }
+        }
+    }
+
     public static void histogramme(opencv_core.Mat image) {
         opencv_core.Mat gray = new opencv_core.Mat(image.size());
         cvtColor(image, gray, CV_RGB2GRAY);
@@ -356,5 +414,77 @@ public class BigMData {
         opencv_core.Mat opened = new opencv_core.Mat(image.size());
         morphologyEx(thresh, opened, MORPH_CLOSE, element);
         Show(opened, "Closed");
+    }
+
+    public static void siftMatching(Mat image) {
+        Mat secondImage = imread("data/tower.jpg");
+
+        opencv_core.KeyPointVector keyPoints = new opencv_core.KeyPointVector();
+        opencv_core.KeyPointVector keyPoints2 = new opencv_core.KeyPointVector();
+        int nFeatures = 0;
+        int nOctaveLayers = 3;
+        double contrastThreshold = 0.03;
+        int edgeThreshold = 10;
+        double sigma = 1.6;
+        Loader.load(opencv_calib3d.class);
+        Loader.load(opencv_shape.class);
+
+        opencv_xfeatures2d.SIFT sift;
+
+        sift = opencv_xfeatures2d.SIFT.create(nFeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma);
+        //First Image
+        sift.detect(image, keyPoints);
+        Mat descriptor = new Mat();
+        sift.compute(image, keyPoints, descriptor);
+
+        //Train Images
+        sift.detect(secondImage, keyPoints2);
+        Mat descriptorSecondImage = new Mat();
+        sift.compute(secondImage, keyPoints2, descriptorSecondImage);
+
+
+        Mat featureImage = new Mat();
+        Mat featureImage2 = new Mat();
+        drawKeypoints(image, keyPoints, featureImage, new opencv_core.Scalar(255, 255, 255, 0),
+                opencv_features2d.DrawMatchesFlags.DRAW_RICH_KEYPOINTS);
+        drawKeypoints(secondImage, keyPoints2, featureImage2, new opencv_core.Scalar(255, 255, 255, 0),
+                opencv_features2d.DrawMatchesFlags.DRAW_RICH_KEYPOINTS);
+
+        Show(featureImage, "Image with SIFT");
+        Show(featureImage2, "Image with SIFT");
+
+        opencv_features2d.BFMatcher matcher = new opencv_features2d.BFMatcher(NORM_L2, false);
+        opencv_core.DMatchVector matches = new opencv_core.DMatchVector();
+        matcher.match(descriptor, descriptorSecondImage, matches);
+
+        opencv_core.DMatchVector bestMatches = selectBest(matches, 100);
+
+        Mat imageMatches = new Mat();
+        byte[] mask = null;
+        drawMatches(image, keyPoints, secondImage, keyPoints2,
+                bestMatches, imageMatches, new opencv_core.Scalar(0, 0, 255, 0), new opencv_core.Scalar(255, 0, 0, 0), mask,
+                opencv_features2d.DrawMatchesFlags.DEFAULT);
+
+        Show(imageMatches, "Matches");
+    }
+
+    public static opencv_core.DMatchVector selectBest(opencv_core.DMatchVector matches, int numberToSelect) {
+        opencv_core.DMatch[] sorted = toArray(matches);
+        Arrays.sort(sorted, (a, b) -> {
+            return a.lessThan(b) ? -1 : 1;
+        });
+        opencv_core.DMatch[] best = Arrays.copyOf(sorted, numberToSelect);
+        return new opencv_core.DMatchVector(best);
+    }
+
+    public static opencv_core.DMatch[] toArray(opencv_core.DMatchVector matches) {
+        assert matches.size() <= Integer.MAX_VALUE;
+        int n = (int) matches.size();
+        // Convert keyPoints to Scala sequence
+        opencv_core.DMatch[] result = new opencv_core.DMatch[n];
+        for (int i = 0; i < n; i++) {
+            result[i] = new opencv_core.DMatch(matches.get(i));
+        }
+        return result;
     }
 }
